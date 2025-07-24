@@ -1,0 +1,9 @@
+[memcached]
+[memcached.connect_info]
+address = "127.0.1"
+port = 11211
+[memcached.runtime_options]
+init_flush = false
+pool_size = 10
+read_timeout = 60
+write_timeout = 60
