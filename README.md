@@ -22,3 +22,5 @@ This repository contains the source code for the All-For-One project. The goal o
 | Memcached | session storage |
 
 ### Structure
+
+[docs/structure.md](docs/structure.md)
