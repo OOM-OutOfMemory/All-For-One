@@ -24,3 +24,13 @@ This repository contains the source code for the All-For-One project. The goal o
 ### Structure
 
 [docs/structure.md](docs/structure.md)
+
+## Improvements
+
+> **Warning**
+> This project is not for production use. It is a personal project.
+> You have to implement your own security measures and configurations.
+
+- Support dynamic configuration (adjust settings without restarting the server)
+- Support more OAuth2.0 providers
+- Support more protocols (e.g., gRPC)
