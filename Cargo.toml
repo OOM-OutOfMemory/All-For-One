@@ -21,7 +21,7 @@ anyhow = "1.0.98"
 # http
 axum = "0.8.4"
 reqwest = "0.12.22"
-oauth2 = "5.0.0"
+openidconnect = "4.0.1"
 
 # format
 jsonwebtoken = "9.3.1"
