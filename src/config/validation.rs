@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::config::types::Config;
 use anyhow::Result;
 
 // if you need,

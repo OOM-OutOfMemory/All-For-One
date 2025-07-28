@@ -2,7 +2,7 @@ use std::{fs::read_to_string, path::Path};
 
 use anyhow::{Context, Result};
 
-use crate::config::{Config, read::read_config};
+use crate::config::read::read_config;
 
 mod api;
 mod config;
