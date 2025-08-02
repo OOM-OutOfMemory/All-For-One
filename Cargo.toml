@@ -8,7 +8,17 @@ edition = "2024"
 tokio = { version = "1.46.1", features = ["full"] }
 
 # client
-memcache = "0.18.0"
+async-memcached = "0.5.0"
+deadpool = { version = "0.12.2", features = ["rt_tokio_1"] }
+deadpool-memcached = "0.3.2"
+sea-orm = { version = "1.1.0", features = [
+    "sqlx-postgres",
+    "runtime-tokio-rustls",
+    "macros",
+    "with-uuid",
+    "with-chrono",
+    "with-json",
+] }
 
 # logger
 tracing = "0.1.41"
@@ -20,8 +30,9 @@ anyhow = "1.0.98"
 
 # http
 axum = "0.8.4"
-reqwest = "0.12.22"
+reqwest = { version = "0.12.22", features = ["json"] }
 openidconnect = "4.0.1"
+oauth2 = "5.0.0"
 
 # format
 jsonwebtoken = "9.3.1"
