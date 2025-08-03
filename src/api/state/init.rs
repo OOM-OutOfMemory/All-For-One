@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 
 use crate::{
-    api::state::types::{AppState, OAuthProviderClient},
+    api::state::types::{app::AppState, oauth_client::OAuthProviderClient},
     config::types::Config,
     db::connect::postgres_connect,
     memcached::connect::memcached_connect,
