@@ -9,11 +9,13 @@ use axum::{
     response::{IntoResponse, Redirect, Response},
     routing::get,
 };
-use axum_extra::extract::{CookieJar, cookie::Cookie};
+use axum_extra::extract::{
+    CookieJar,
+    cookie::{Cookie, SameSite},
+};
 use deadpool::managed::Pool;
 use deadpool_memcached::Manager;
 use serde::Deserialize;
-use tracing::info;
 use uuid::Uuid;
 
 use crate::{
@@ -56,9 +58,13 @@ pub async fn oauth_login(
 
     cache_auth_redirect_info_by_session_id(memcached_client, session_id, &cache_body).await?;
 
-    let mut session_cookie = Cookie::new(COOKIE_AUTH_REQUEST_ID, session_id.to_string());
-    session_cookie.set_http_only(true);
-    session_cookie.set_secure(true);
+    let session_cookie = Cookie::build((COOKIE_AUTH_REQUEST_ID, session_id.to_string()))
+        .http_only(true)
+        .secure(true)
+        .same_site(SameSite::Lax)
+        .max_age(cookie::time::Duration::seconds(12))
+        .path("/")
+        .build();
     let updated_jar = jar.add(session_cookie);
 
     Ok((updated_jar, Redirect::to(&auth_url)).into_response())
@@ -95,7 +101,10 @@ async fn oauth_callback(
         .callback(idp, callback_params.code, verification_token.pkce_verifier)
         .await?;
 
-    let updated_jar = jar.remove(COOKIE_AUTH_REQUEST_ID);
+    let session_remove = Cookie::build((COOKIE_AUTH_REQUEST_ID, ""))
+        .path("/")
+        .build();
+    let updated_jar = jar.remove(session_remove);
 
     Ok((
         updated_jar,
