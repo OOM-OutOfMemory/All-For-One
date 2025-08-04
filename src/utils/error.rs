@@ -1,13 +1,28 @@
-use thiserror::Error;
+use axum::extract::rejection::{JsonRejection, PathRejection, QueryRejection};
 
-#[derive(Error, Debug)]
+#[derive(thiserror::Error, Debug)]
 pub enum AllForOneError {
-    #[error("Configuration error: {0}")]
-    ConfigError(String),
-    #[error("Session error: {0}")]
-    MemcachedError(String),
-    #[error("Logger error: {0}")]
-    LoggerError(String),
-    #[error("Runtime error: {0}")]
-    RuntimeError(String),
+    #[error("path extraction error")]
+    Path(#[from] PathRejection),
+    #[error("query extraction error")]
+    Query(#[from] QueryRejection),
+    #[error("json extraction error")]
+    Json(#[from] JsonRejection),
+    #[error("header extraction error")]
+    Header(String),
+
+    #[error("parse error")]
+    Parse(AllForOneParseError),
+
+    #[error("auth error")]
+    Auth(String),
+
+    #[error("internal error")]
+    Internal(#[from] anyhow::Error),
+}
+
+#[derive(Debug)]
+pub struct AllForOneParseError {
+    pub field: String,
+    pub message: String,
 }
