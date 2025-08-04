@@ -10,6 +10,7 @@ dependencies = [
  "async-memcached 0.5.0",
  "axum",
  "axum-extra",
+ "cookie",
  "deadpool",
  "deadpool-memcached",
  "jsonwebtoken",
