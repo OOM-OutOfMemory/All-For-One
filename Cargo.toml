@@ -30,6 +30,7 @@ anyhow = "1.0.98"
 
 # http
 axum = "0.8.4"
+axum-extra = { version = "0.10.1", features = ["cookie"] }
 reqwest = { version = "0.12.22", features = ["json"] }
 openidconnect = "4.0.1"
 oauth2 = "5.0.0"
