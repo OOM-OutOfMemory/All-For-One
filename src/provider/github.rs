@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use oauth2::{
-    AccessToken, AuthUrl, Client, CsrfToken, PkceCodeVerifier, RedirectUrl, Scope, TokenResponse,
-    TokenUrl, basic::BasicClient,
+    AccessToken, AuthUrl, Client, CsrfToken, PkceCodeChallenge, PkceCodeVerifier, RedirectUrl,
+    Scope, TokenResponse, TokenUrl, basic::BasicClient,
 };
 use openidconnect::{ClientId, ClientSecret};
 use reqwest::redirect::Policy;
@@ -57,15 +57,18 @@ impl GithubAuthenticator {
 
 impl Authentication for GithubAuthenticator {
     async fn auth_redirect_info(&self) -> AuthRedirectInfo {
+        let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
         let (auth_url, csrf_token) = self
             .github_client
             .authorize_url(CsrfToken::new_random)
             .add_scope(Scope::new("read:user".to_string()))
+            .set_pkce_challenge(pkce_challenge)
             .url();
 
         AuthRedirectInfo {
             auth_url: auth_url.to_string(),
             csrf_token: csrf_token.secret().to_string(),
+            pkce_verifier: pkce_verifier.secret().to_string(),
             nonce: None,
         }
     }

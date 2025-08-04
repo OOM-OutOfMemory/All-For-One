@@ -27,10 +27,11 @@ pub enum OAuthProvider {
     Github,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Debug)]
 pub struct AuthRedirectInfo {
     pub auth_url: String,
     pub csrf_token: String,
+    pub pkce_verifier: String,
     pub nonce: Option<String>,
 }
 
