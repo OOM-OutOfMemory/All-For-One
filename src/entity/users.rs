@@ -14,6 +14,7 @@ pub struct Model {
     pub is_active: bool,
     pub created_at: DateTime,
     pub updated_at: DateTime,
+    pub idp: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
