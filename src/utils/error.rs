@@ -8,21 +8,13 @@ pub enum AllForOneError {
     Query(#[from] QueryRejection),
     #[error("json extraction error")]
     Json(#[from] JsonRejection),
-    #[error("header extraction error")]
-    Header(String),
-
-    #[error("parse error")]
-    Parse(AllForOneParseError),
 
     #[error("auth error")]
     Auth(String),
 
+    #[error("database error")]
+    Db(#[from] sea_orm::DbErr),
+
     #[error("internal error")]
     Internal(#[from] anyhow::Error),
-}
-
-#[derive(Debug)]
-pub struct AllForOneParseError {
-    pub field: String,
-    pub message: String,
 }
