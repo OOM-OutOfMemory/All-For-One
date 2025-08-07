@@ -12,14 +12,14 @@ pub struct Config {
     pub security: SecurityConfig,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Server {
     pub domain: String,
     pub port: u16,
     pub user_agent: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct LoggerConfig {
     pub level: String,
 }
@@ -115,7 +115,7 @@ pub struct JwtSecurityConfig {
     pub algorithm: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct SessionSecurityConfig {
     pub cookie_ttl: u64,
     pub cache_ttl: u64,

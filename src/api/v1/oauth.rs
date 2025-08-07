@@ -24,6 +24,7 @@ use crate::{
         state::types::{app::AppState, jwt_issuer, oauth_client::OAuthProviderClient},
         types::cookie::COOKIE_AUTH_REQUEST_ID,
     },
+    config::types::SessionSecurityConfig,
     db::repo::users::UsersRepo,
     memcached::{
         repo::{
@@ -36,10 +37,49 @@ use crate::{
     utils::error::AllForOneError,
 };
 
+// 세션 보안 설정을 적용한 쿠키 생성 함수
+fn create_session_cookie(session_config: &SessionSecurityConfig, session_id: &str) -> Cookie<'static> {
+    let same_site = match session_config.same_site.as_str() {
+        "Strict" => SameSite::Strict,
+        "Lax" => SameSite::Lax,
+        "None" => SameSite::None,
+        _ => SameSite::Lax, // 기본값
+    };
+
+    Cookie::build((COOKIE_AUTH_REQUEST_ID, session_id.to_string()))
+        .http_only(session_config.http_only)
+        .secure(session_config.secure_cookies)
+        .same_site(same_site)
+        .max_age(cookie::time::Duration::seconds(session_config.cookie_ttl as i64))
+        .path("/")
+        .build()
+}
+
+// 세션 쿠키 삭제 함수 (보안 설정 적용)
+fn create_session_removal_cookie(session_config: &SessionSecurityConfig) -> Cookie<'static> {
+    let same_site = match session_config.same_site.as_str() {
+        "Strict" => SameSite::Strict,
+        "Lax" => SameSite::Lax,
+        "None" => SameSite::None,
+        _ => SameSite::Lax, // 기본값
+    };
+
+    let mut cookie = Cookie::build((COOKIE_AUTH_REQUEST_ID, ""))
+        .http_only(session_config.http_only)
+        .secure(session_config.secure_cookies)
+        .same_site(same_site)
+        .path("/")
+        .build();
+    
+    cookie.make_removal();
+    cookie
+}
+
 pub async fn oauth_login(
     path: Result<Path<OAuthProvider>, PathRejection>,
     State(oauth_client): State<Arc<OAuthProviderClient>>,
     State(memcached_client): State<Arc<Pool<Manager>>>,
+    State(session_config): State<Arc<SessionSecurityConfig>>,
     jar: CookieJar,
 ) -> Result<Response, AllForOneError> {
     let Path(idp) = path?;
@@ -57,15 +97,9 @@ pub async fn oauth_login(
         pkce_verifier,
         nonce,
     };
-    cache_auth_redirect_info_by_session_id(memcached_client, session_id, &cache_body).await?;
+    cache_auth_redirect_info_by_session_id(memcached_client, session_id, &cache_body, session_config.cache_ttl).await?;
 
-    let session_cookie = Cookie::build((COOKIE_AUTH_REQUEST_ID, session_id.to_string()))
-        .http_only(true)
-        .secure(true)
-        .same_site(SameSite::Lax)
-        .max_age(cookie::time::Duration::seconds(12))
-        .path("/")
-        .build();
+    let session_cookie = create_session_cookie(&session_config, &session_id.to_string());
     let updated_jar = jar.add(session_cookie);
 
     Ok((updated_jar, Redirect::to(&auth_url)).into_response())
@@ -84,6 +118,7 @@ async fn oauth_callback(
     State(memcached_client): State<Arc<Pool<Manager>>>,
     State(db_client): State<Arc<DatabaseConnection>>,
     State(jwt_issuer): State<Arc<jwt_issuer::JwtIssuer>>,
+    State(session_config): State<Arc<SessionSecurityConfig>>,
     jar: CookieJar,
 ) -> Result<Response, AllForOneError> {
     let Path(idp) = path?;
@@ -93,9 +128,7 @@ async fn oauth_callback(
         .and_then(|cookie| cookie.value().parse::<Uuid>().ok())
         .ok_or_else(|| AllForOneError::Auth("session id is not found".to_string()))?;
 
-    let session_remove = Cookie::build((COOKIE_AUTH_REQUEST_ID, ""))
-        .path("/")
-        .build();
+    let session_remove = create_session_removal_cookie(&session_config);
     let updated_jar = jar.remove(session_remove);
 
     let verification_token =
