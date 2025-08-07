@@ -1,6 +1,7 @@
 /.vscode
 /target
 /jwks
+/.kiro
 
 .env
 config.toml
