@@ -6,5 +6,7 @@ mod jwks;
 mod oauth;
 
 pub async fn router(app_state: AppState) -> Router {
-    Router::new().nest("/oauth", oauth::router(app_state.clone()).await)
+    Router::new()
+        .nest("/oauth", oauth::router(app_state.clone()).await)
+        .nest("/jwks", jwks::router(app_state).await)
 }

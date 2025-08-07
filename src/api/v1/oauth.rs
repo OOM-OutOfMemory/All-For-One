@@ -82,6 +82,8 @@ async fn oauth_callback(
     path: Result<Path<OAuthProvider>, PathRejection>,
     State(oauth_client): State<Arc<OAuthProviderClient>>,
     State(memcached_client): State<Arc<Pool<Manager>>>,
+    State(db_client): State<Arc<DatabaseConnection>>,
+    State(jwt_issuer): State<Arc<jwt_issuer::JwtIssuer>>,
     jar: CookieJar,
 ) -> Result<Response, AllForOneError> {
     let Path(idp) = path?;
@@ -110,10 +112,22 @@ async fn oauth_callback(
         )
         .await?;
 
-    let session_remove = Cookie::build((COOKIE_AUTH_REQUEST_ID, ""))
-        .path("/")
-        .build();
-    let updated_jar = jar.remove(session_remove);
+    let idp_uid = oauth_client
+        .get_user_info(idp.clone(), access_token.clone())
+        .await?;
+
+    let txn = db_client.begin().await?;
+    let user_repo = UsersRepo::new(&txn);
+    let user = user_repo
+        .get_or_create_user_if_not_exist(idp, idp_uid)
+        .await?;
+    txn.commit().await?;
+
+    let key_id = jwt_issuer.get_kid();
+    let jwt = jwt_issuer
+        .issue_jwt(key_id, user.id)
+        .map_err(|e| AllForOneError::Auth(format!("fail to issue jwt: {}", e)))?;
+    let response_body = crate::api::response::types::token::Token { access_token: jwt };
 
     Ok((
         updated_jar,
