@@ -39,6 +39,8 @@ log_level = "debug"
 iss = "https://auth.example.com"
 aud = "AllForOne-Project-Service"
 keys_path = "./jwks"
+
+# if kid's key not exist, it will be generated automatically
 [[jwks.keys]]
 kid = "13f03b9f-f209-4dcd-86f0-69cc19e773eb"
 
@@ -56,8 +58,12 @@ token_url = "https://github.com/login/oauth/access_token"
 # JWT Security Settings
 [security.jwt]
 access_token_ttl = 900          # 15 minutes in seconds
+
+# refresh token and rotate not suopported yet
 refresh_token_ttl = 86400       # 24 hours in seconds
 key_rotation_interval = 2592000 # 30 days in seconds
+
+# only EdDSA keys are supported
 algorithm = "EdDSA"
 
 # Session Security Settings
@@ -76,6 +82,7 @@ burst_size = 10
 cleanup_interval = 300   # 5 minutes in seconds
 
 # CORS Settings
+# not adjust yet
 [security.cors]
 enabled = true
 allowed_origins = ["https://example.com", "https://app.example.com"]
@@ -84,6 +91,7 @@ allowed_headers = ["Content-Type", "Authorization"]
 max_age = 3600
 
 # Security Headers Settings
+# not adjust yet
 [security.security_headers]
 hsts_enabled = true
 hsts_max_age = 31536000                                                                                # 1 year
