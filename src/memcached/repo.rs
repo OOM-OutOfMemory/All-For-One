@@ -11,6 +11,7 @@ pub async fn cache_auth_redirect_info_by_session_id(
     client: Arc<Pool<Manager>>,
     session_id: Uuid,
     body: &AuthVerifyToken,
+    cache_ttl: u64,
 ) -> Result<()> {
     let body = sonic_rs::json!(body);
 
@@ -18,7 +19,7 @@ pub async fn cache_auth_redirect_info_by_session_id(
         .get()
         .await
         .context("fail to get memcached client from pool")?
-        .set(session_id.to_string(), body.to_string(), Some(10), None)
+        .set(session_id.to_string(), body.to_string(), Some(cache_ttl as i64), None)
         .await
         .context("fail to cache auth infomation by session id")?;
     Ok(result)
