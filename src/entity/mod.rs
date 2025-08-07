@@ -3,3 +3,6 @@
 pub mod prelude;
 
 pub mod users;
+
+#[cfg(test)]
+pub mod users_tests;

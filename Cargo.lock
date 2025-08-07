@@ -24,6 +24,7 @@ dependencies = [
  "sea-orm",
  "serde",
  "sonic-rs",
+ "tempfile",
  "thiserror 2.0.12",
  "tokio",
  "toml",
