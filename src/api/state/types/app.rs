@@ -4,13 +4,14 @@ use deadpool_memcached::Manager;
 use sea_orm::DatabaseConnection;
 use std::sync::Arc;
 
-use crate::api::state::types::oauth_client::OAuthProviderClient;
+use crate::api::state::types::{jwt_issuer::JwtIssuer, oauth_client::OAuthProviderClient};
 
 #[derive(Clone)]
 pub struct AppState {
     pub oauth_provider_state: Arc<OAuthProviderClient>,
     pub postgres_state: Arc<DatabaseConnection>,
     pub memcached_state: Arc<Pool<Manager>>,
+    pub jwt_issuer: Arc<JwtIssuer>,
 }
 
 impl FromRef<AppState> for Arc<OAuthProviderClient> {
@@ -28,5 +29,11 @@ impl FromRef<AppState> for Arc<DatabaseConnection> {
 impl FromRef<AppState> for Arc<Pool<Manager>> {
     fn from_ref(input: &AppState) -> Self {
         input.memcached_state.clone()
+    }
+}
+
+impl FromRef<AppState> for Arc<JwtIssuer> {
+    fn from_ref(input: &AppState) -> Self {
+        input.jwt_issuer.clone()
     }
 }

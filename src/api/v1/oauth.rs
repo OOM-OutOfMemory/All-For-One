@@ -15,14 +15,16 @@ use axum_extra::extract::{
 };
 use deadpool::managed::Pool;
 use deadpool_memcached::Manager;
+use sea_orm::{DatabaseConnection, TransactionTrait};
 use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
     api::{
-        state::types::{app::AppState, oauth_client::OAuthProviderClient},
+        state::types::{app::AppState, jwt_issuer, oauth_client::OAuthProviderClient},
         types::cookie::COOKIE_AUTH_REQUEST_ID,
     },
+    db::repo::users::UsersRepo,
     memcached::{
         repo::{
             cache_auth_redirect_info_by_session_id,
@@ -30,7 +32,7 @@ use crate::{
         },
         types::AuthVerifyToken,
     },
-    provider::types::{AuthRedirectInfo, OAuthProvider},
+    provider::types::{config::AuthRedirectInfo, idp::OAuthProvider},
     utils::error::AllForOneError,
 };
 
@@ -48,14 +50,13 @@ pub async fn oauth_login(
         pkce_verifier,
         nonce,
     } = oauth_client.auth_request(idp).await;
+
+    let session_id = Uuid::now_v7();
     let cache_body = AuthVerifyToken {
         csrf_token,
         pkce_verifier,
         nonce,
     };
-
-    let session_id = Uuid::now_v7();
-
     cache_auth_redirect_info_by_session_id(memcached_client, session_id, &cache_body).await?;
 
     let session_cookie = Cookie::build((COOKIE_AUTH_REQUEST_ID, session_id.to_string()))
@@ -90,15 +91,23 @@ async fn oauth_callback(
         .and_then(|cookie| cookie.value().parse::<Uuid>().ok())
         .ok_or_else(|| AllForOneError::Auth("session id is not found".to_string()))?;
 
+    let session_remove = Cookie::build((COOKIE_AUTH_REQUEST_ID, ""))
+        .path("/")
+        .build();
+    let updated_jar = jar.remove(session_remove);
+
     let verification_token =
         get_auth_redirect_info_from_memecached_by_session_id(memcached_client, session_id).await?;
-
     if verification_token.csrf_token != callback_params.state {
         return Err(AllForOneError::Auth("csrf token is invalid".to_string()));
     }
 
-    let auth_request = oauth_client
-        .callback(idp, callback_params.code, verification_token.pkce_verifier)
+    let access_token = oauth_client
+        .callback(
+            idp.clone(),
+            callback_params.code,
+            verification_token.pkce_verifier,
+        )
         .await?;
 
     let session_remove = Cookie::build((COOKIE_AUTH_REQUEST_ID, ""))
@@ -108,10 +117,7 @@ async fn oauth_callback(
 
     Ok((
         updated_jar,
-        format!(
-            "oauth callback and will return jwt; access_token = {}",
-            auth_request
-        ),
+        (axum::http::StatusCode::OK, axum::Json(response_body)),
     )
         .into_response())
 }

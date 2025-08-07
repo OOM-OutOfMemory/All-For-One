@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 
 use crate::{
-    api::state::types::{app::AppState, oauth_client::OAuthProviderClient},
+    api::state::types::{app::AppState, jwt_issuer::JwtIssuer, oauth_client::OAuthProviderClient},
     config::types::Config,
     db::connect::postgres_connect,
     memcached::connect::memcached_connect,

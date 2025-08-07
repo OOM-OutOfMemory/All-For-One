@@ -2,14 +2,20 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use oauth2::{
-    AccessToken, AuthUrl, Client, CsrfToken, PkceCodeChallenge, PkceCodeVerifier, RedirectUrl,
-    Scope, TokenResponse, TokenUrl, basic::BasicClient,
+    AuthUrl, Client, CsrfToken, PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, Scope,
+    TokenResponse, TokenUrl, basic::BasicClient,
 };
 use openidconnect::{ClientId, ClientSecret};
 use reqwest::redirect::Policy;
 use url::Url;
 
-use crate::provider::types::{AllForOneJwt, AuthRedirectInfo, Authentication, OAuthClientConfig};
+use crate::{
+    provider::types::{
+        config::{AuthRedirectInfo, Authentication, OAuthClientConfig},
+        idp_uid::GithubUid,
+    },
+    utils::types::HTTP_REQUEST_USER_AGENT,
+};
 
 pub type GithubClient = Arc<
     Client<
@@ -41,17 +47,48 @@ impl GithubAuthenticator {
         let resource_url =
             Url::parse(&config.resource_url).context("fail to parse resource url")?;
         let github_client =
-            github_config_client(config).context("Failed to create Github client")?;
+            github_config_client(config).context("failed to create github client")?;
         let http_client = reqwest::Client::builder()
             .redirect(Policy::none())
             .build()
-            .unwrap();
+            .context("fail to make github http client")?;
 
         Ok(GithubAuthenticator {
             github_client,
             resource_url,
             http_client,
         })
+    }
+}
+
+impl GithubAuthenticator {
+    pub async fn get_user_info(&self, access_token: String) -> Result<String> {
+        let user_info_url = self.resource_url.join("user")?;
+        let response = self
+            .http_client
+            .get(user_info_url)
+            .bearer_auth(access_token.clone())
+            .header(
+                reqwest::header::USER_AGENT,
+                HTTP_REQUEST_USER_AGENT.get().unwrap(),
+            )
+            .send()
+            .await
+            .context("failed to send request to user info endpoint")?;
+
+        if !response.status().is_success() {
+            return Err(anyhow::anyhow!(
+                "Failed to fetch user info: {}",
+                response.status()
+            ));
+        }
+
+        let user = response
+            .json::<GithubUid>()
+            .await
+            .context("fail to get user uid")?;
+
+        Ok(user.id.to_string())
     }
 }
 
@@ -89,8 +126,8 @@ impl Authentication for GithubAuthenticator {
 fn github_config_client(config: OAuthClientConfig) -> Result<GithubClient> {
     let idp_secret = ClientSecret::new(config.client_secret);
     let idp_id = ClientId::new(config.client_id);
-    let auth_url = AuthUrl::new(config.auth_url).expect("Invalid authorization endpoint URL");
-    let token_url = TokenUrl::new(config.token_url).expect("Invalid token endpoint URL");
+    let auth_url = AuthUrl::new(config.auth_url).context("Invalid authorization endpoint URL")?;
+    let token_url = TokenUrl::new(config.token_url).context("Invalid token endpoint URL")?;
 
     let github_oauth_config_client = BasicClient::new(idp_id)
         .set_client_secret(idp_secret)

@@ -2,7 +2,6 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 use sea_orm::DatabaseConnection;
-use tracing::info;
 
 use crate::config::types::Config;
 

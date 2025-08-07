@@ -1,8 +1,4 @@
-use std::sync::Arc;
-
-use axum::{Router, extract::State, routing::get};
-use sea_orm::{ConnectionTrait, EntityTrait, Statement};
-use tracing::info;
+use axum::{Router, routing::get};
 
 use crate::api::{state::types::app::AppState, v1};
 

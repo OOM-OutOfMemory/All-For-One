@@ -1,21 +1,37 @@
-use std::{fs::read_to_string, path::Path};
+use anyhow::Result;
+use tracing::info;
 
-use anyhow::{Context, Result};
-
-use crate::config::read::read_config;
+use crate::{
+    config::read::read_config,
+    db::connect::postgres_connect,
+    memcached::connect::memcached_connect,
+    utils::{logger::init_logger, types::HTTP_REQUEST_USER_AGENT},
+};
 
 mod api;
 mod config;
+mod db;
+mod entity;
 mod memcached;
 mod provider;
-mod user;
 mod utils;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let config_path = std::env::var("CONFIG").unwrap_or("config.toml".to_string());
-    let path = Path::new(&config_path);
-    let config = read_config(path)?;
-    println!("{:#?}", config);
+    let config = read_config()?;
+
+    HTTP_REQUEST_USER_AGENT.get_or_init(|| config.server.user_agent.clone());
+
+    init_logger(&config)?;
+    info!("logger initialized");
+
+    memcached_connect(&config)?;
+    info!("memcached connected");
+
+    postgres_connect(&config).await?;
+    info!("postgres connected");
+
+    info!("server will be started");
+    api::server::server_start(config).await?;
     Ok(())
 }
