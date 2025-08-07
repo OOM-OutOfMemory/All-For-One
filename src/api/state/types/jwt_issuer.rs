@@ -19,6 +19,10 @@ pub struct JwtIssuer {
     key_pairs: HashMap<Uuid, JwtKeyPair>,
     iss: String,
     aud: String,
+    access_token_ttl: i64,
+    refresh_token_ttl: i64,
+    key_rotation_interval: u64,
+    algorithm: String,
 }
 
 pub struct JwtKeyPair {
@@ -45,6 +49,10 @@ impl JwtIssuer {
             iss,
             aud,
             key_pairs,
+            access_token_ttl: config.security.jwt.access_token_ttl as i64,
+            refresh_token_ttl: config.security.jwt.refresh_token_ttl as i64,
+            key_rotation_interval: config.security.jwt.key_rotation_interval,
+            algorithm: config.security.jwt.algorithm.clone(),
         })
     }
 
@@ -52,7 +60,11 @@ impl JwtIssuer {
         self.key_pairs.keys().next().cloned().unwrap()
     }
 
-    pub fn issue_jwt(&self, kid: Uuid, sub: Uuid) -> Result<String> {
+    pub fn get_access_token_ttl(&self) -> i64 {
+        self.access_token_ttl
+    }
+
+    pub fn issue_jwt(&self, kid: Uuid, sub: Uuid, ttl: i64) -> Result<String> {
         let mut header = self.header.clone();
         header.kid = Some(kid.to_string());
 
@@ -69,7 +81,7 @@ impl JwtIssuer {
             aud: self.aud.clone(),
             iss: self.iss.clone(),
             sub: sub,
-            exp: (now + chrono::Duration::hours(1)).timestamp(),
+            exp: (now + chrono::Duration::seconds(ttl)).timestamp(),
             jti: Uuid::now_v7(),
             iat: now.timestamp(),
             nbf: now.timestamp(),

@@ -4,9 +4,9 @@ use deadpool_memcached::Manager;
 use sea_orm::DatabaseConnection;
 use std::sync::Arc;
 
-use crate::{
-    api::state::types::{jwt_issuer::JwtIssuer, oauth_client::OAuthProviderClient},
-    config::types::SessionSecurityConfig,
+use crate::api::{
+    state::types::{jwt_issuer::JwtIssuer, oauth_client::OAuthProviderClient},
+    types::session::SessionCookieConfig,
 };
 
 #[derive(Clone)]
@@ -15,7 +15,7 @@ pub struct AppState {
     pub postgres_state: Arc<DatabaseConnection>,
     pub memcached_state: Arc<Pool<Manager>>,
     pub jwt_issuer: Arc<JwtIssuer>,
-    pub session_config: Arc<SessionSecurityConfig>,
+    pub session_config: Arc<SessionCookieConfig>,
 }
 
 impl FromRef<AppState> for Arc<OAuthProviderClient> {
@@ -42,7 +42,7 @@ impl FromRef<AppState> for Arc<JwtIssuer> {
     }
 }
 
-impl FromRef<AppState> for Arc<SessionSecurityConfig> {
+impl FromRef<AppState> for Arc<SessionCookieConfig> {
     fn from_ref(input: &AppState) -> Self {
         input.session_config.clone()
     }
